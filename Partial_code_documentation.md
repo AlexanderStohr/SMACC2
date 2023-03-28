@@ -31,8 +31,8 @@ But seriously: **[read those tutorials first!](https://www.boost.org/doc/libs/1_
   struct MyStruct : BaseClass { ... };   // identical to "struct MyStruct : public BaseClass { ... };"
   class MyClass : BaseClass { ... };   // identical to "class MyClass : private BaseClass { ... };"
   ```
-  
-  </br>
+
+</br>
 - Boost Statechart extensively uses the **curiously recurring template pattern** (CRTP), which means that a derived class/struct inherits from a templated class/struct that has the derived class/struct as its first template parameter. E.g.:
 
   ```c++
@@ -41,14 +41,14 @@ But seriously: **[read those tutorials first!](https://www.boost.org/doc/libs/1_
   This is curious indeed! ;-)/br>
   Wrt. the use of SMACC2 / Boost Statechart, there is no need to further study this design pattern; just accept it for what it is and get used to the notation.
 
-  </br>
+</br>
 - Typically, the **namespace** `sc` is defined for easier readability:
 
   ```c++
   namespace sc = boost::statechart;
   ```
-  
-  </br>
+
+</br>
 - A Boost Statechart **state machine** inherits from `sc::state_machine` (synchronous state machine), or from `sc::asynchronous_state_machine` e.g.:
 
   ```c++
@@ -59,12 +59,12 @@ But seriously: **[read those tutorials first!](https://www.boost.org/doc/libs/1_
 
   In this, `ActiveState` is forward declared, as it is needed in the declaration of the state machines.</br>
   Re. the state machine declarations: according to the CRTP, the first template parameter in the state machine declaration is the derived type. The second template parameter is the (type of) state which will be activated upon entering the state machine.</br>
-  
-   
+
+
   — A Smacc2 state machine inherits from `SmaccStateMachineBase`, which is derived from `sc::asynchronous_state_machine`.
-   </br>
-   </br>
-   
+</br>
+</br>
+
 - A Boost Statechart **state** inherits from `sc::simple_state` (or `sc::state`), e.g.:
   ```c++
   struct ActiveState : sc::simple_state<ActiveState, StateMachine>       // ActiveState is a toplevel state in StateMachine
@@ -86,7 +86,7 @@ But seriously: **[read those tutorials first!](https://www.boost.org/doc/libs/1_
   sc::custom_reaction< event > // with react function  sc::result react( const event & );
   sc::deferral< event >  // deferred events are stored in a separate queue, which is emptied into the main queue when this state is exited.
   ```
-  
+
 
   Custom event reaction, to use in the `react()` function for a `custom_reaction`:</br>
   ```c++
@@ -98,20 +98,20 @@ But seriously: **[read those tutorials first!](https://www.boost.org/doc/libs/1_
   ```
   See [this tutorial paragraph](https://www.boost.org/doc/libs/1_81_0/libs/statechart/doc/tutorial.html#TransitionActions) for more info on transition actions.
 
-   </br>
+</br>
 - Note that the [Boost Statechart tutorials](https://www.boost.org/doc/libs/1_81_0/libs/statechart/doc/tutorial.html) discuss the use of multiple inheritance as a design pattern to retrieve information from the states:
 
   ```c++
   struct Running : IElapsedTime, sc::simple_state< Running, Active >
   ```
-  
+
   The state `Running` is derived from `sc::simple_state` and from the interface class `IElapsedTime`. This interface class defines common methods to be implemented by each state.</br>
-  </br>
+</br>
   Similarly (though not necessarily exactly for the same reason):
   - A `smacc2::SmaccState` inherits from `sc::simple_state` and from `smacc2::ISmaccState`.</br>
   -  A `smacc2::SmaccStateMachineBase` inherits from `sc::asynchronous_state_machine` and from `smacc2::ISmaccStateMachine`.
-   </br>
-   </br>
+</br>
+</br>
 
 - In Boost Statechart,  **orthogonal states** are states that have multiple active substates at once. </br>
 In SMACC2 the word `orthogonal` is also used, but it has a very different meaning. See further down for more info on SMACC2 orthogonals.
@@ -159,7 +159,7 @@ As a side note: the Boost Statechart [tutorials](https://www.boost.org/doc/libs/
 ### So... asynchronous state machines?
 
 The solution to above issue is to use an asynchronous state machine. The processing of an asynchronous state machine is split into:
-- A `scheduler`, which receives events and stores them into a queue, and 
+- A `scheduler`, which receives events and stores them into a queue, and
 - A `processor`, which sequentially gets an event from the scheduler and processes it in the state machine.
 
 Boost Statechart provides one type of scheduler: the `sc::fifo_scheduler`, which feeds the events to the processor in a 'First In First Out' fashion.</br>
@@ -172,22 +172,22 @@ int main()
 {
   // Create a scheduler
   sc::fifo_scheduler<> my_scheduler( bool waitOnEmptyQueue );
-  
+
   // Create a processor from the scheduler
   // This call instantiates the state machine
   auto my_processor_handle = my_scheduler.create_processor< state_machine_type >();
-  
+
   // Initiate the processor
   my_scheduler.initiate_processor( my_processor_handle );
-  
+
   // Optional: queue events
   //my_scheduler.queue_event( my_processor_handle, my_event1 );
   //my_scheduler.queue_event( my_processor_handle, my_event2 );
-  
+
   // Run the scheduler by calling sc::fifo_scheduler::operator()
   my_scheduler();
 }
-``` 
+```
 Re. the `sc::fifo_scheduler` constructor:
 - If `waitOnEmptyQueue` is `false`, then `sc::fifo_scheduler::operator()` returns when the queue is empty.
 - If `waitOnEmptyQueue` is `true`, then `sc::fifo_scheduler::operator()` does not return on an empty queue, but waits for future events to be added (by calling `queue_event()` on the scheduler, e.g. from another thread or from the state machine itself),
@@ -227,22 +227,22 @@ void run()
 {
   // create the asynchronous state machine scheduler
   SmaccFifoScheduler scheduler1(true);
- 
+
   // create the signalDetector component
   SignalDetector signalDetector(&scheduler1);
- 
+
   // create the asynchronous state machine processor
   SmaccFifoScheduler::processor_handle sm =
     scheduler1.create_processor<StateMachineType>(&signalDetector);
- 
+
   // initialize the asynchronous state machine processor
   signalDetector.setProcessorHandle(sm);
- 
+
   scheduler1.initiate_processor(sm);
- 
+
   //create a thread for the asynchronous state machine processor execution
   boost::thread otherThread(boost::bind(&sc::fifo_scheduler<>::operator(), &scheduler1, 0));
- 
+
   // use the  main thread for the signal detector component (waiting actionclient requests)
   signalDetector.pollingLoop();
 }
@@ -252,7 +252,7 @@ Let's have a look:
 - First, a `SmaccFifoScheduler` is created.
   - A `SmaccFifoScheduler` is a typedef for an `sc::fifo_scheduler<SmaccFifoWorker, SmaccAllocator>`. (see [smacc_fifo_scheduler.hpp](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc__fifo__scheduler_8hpp_source.html)) </br>
   - A `SmaccFifoWorker` is similarly an `sc::fifo_worker` and a `SmaccAllocator` an `std::allocator` (see [smacc_fifo_worker.hpp](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc__fifo__worker_8hpp_source.html)).
-  
+
   So this is more or less standard Boost Statechart, given `SmAtomic` is an `sc::asynchronous_state_machine`.
 
 - Then a `SignalDetector` is created. This is a SMACC2 class.</br>
@@ -298,13 +298,13 @@ We see that it polls *something* and spins the node:
     r.sleep();
   }
   ```
-  </br>
+</br>
 
-> 
+>
 > </br>
-> 
+>
 > ### Intermediate conclusions #1
-> 
+>
 > - A `FifoScheduler` and `Processor` are created to run an asynchronous state machine.
 > - The state machine is created by `create_processor<>()`. The state machine constructor mainly
 >   - Creates a **ROS2 node**, and
@@ -314,10 +314,9 @@ We see that it polls *something* and spins the node:
 >   - At a configurable rate (default 20Hz),
 >   - In the context of the **main thread**. </br>
 > </br>
-> 
+>
 
- </br>
-
+</br>
 </br>
 
 ### The SignalDetector poll routine
@@ -352,11 +351,11 @@ It does the following (see below for further clarification):
 
 >
 ></br>
-> 
+>
 >### Intermezzo
 >
 > The next paragraph introduces orthogonals, clients, client behafiors, etc.
-> 
+>
 > From the current (27 jan 2023) [SMACC2 documentation](https://smacc.dev/intro-to-substate-objects/) we gather:
 > - Orthogonals are classes:
 >   - Instantiated in the state machine,
@@ -403,7 +402,6 @@ In other words:
 
 ### findUpdatableStateElements(currentstate)
 
-
 Implemented in [signal_detector.cpp](https://robosoft-ai.github.io/smacc2_doxygen/master/html/signal__detector_8cpp_source.html). Similar to `findupdatableClientsAndComponents()`, it:
 
   - Clears `std::vector<ISmaccUpdatable*> updatableStateElements_`,
@@ -413,7 +411,7 @@ Implemented in [signal_detector.cpp](https://robosoft-ai.github.io/smacc2_doxyge
   - Adds all **state reactors** (`smacc2::StateReactor`) of the **state** if they inherit from `ISmaccUpdatable`,
   - Adds all **event generators** (`smacc2::SmaccEventGenerator`) of the **state** if they inherit from `ISmaccUpdatable`.
 
-  </br>
+</br>
 
 In other words:
   - After each state change, `updatableStateElements_` is rebuilt to hold:
@@ -421,13 +419,11 @@ In other words:
     - The current state,
     - State reactors of the current state, and
     - Event generators of the current state,
-  - if these are `ISmaccUpdatable`. 
+  - if these are `ISmaccUpdatable`.
 
 Note that, although client behaviors are in the orthogonal (persistent to the state machine lifetime), they are added and removed from the orthogonal on each state change (i.e. client behaviors are persistent to the lifetime of the **state**).
 
 </br>
-
-
 
 ### ISmaccUpdatable
 
@@ -445,11 +441,11 @@ In other words: an `ISmaccUpdatable` has its `update()` method called periodical
 </br>
 </br>
 
-> 
+>
 > </br>
-> 
+>
 > ### Intermediate conclusions #2
-> 
+>
 > - The **main thread** runs the SignalDetector **polling loop** and **spins the state machine node**,
 > - This at a default frequency of 20Hz or according to a ROS2 parameter,
 > - A state machine has **orthogonals**, with lifetime of the **state machine**,
@@ -461,16 +457,16 @@ In other words: an `ISmaccUpdatable` has its `update()` method called periodical
 > - This either at the polling loop frequency or at the set update period of the `ISmaccUpdatable`.
 >
 > </br>
-> 
+>
 
 </br></br>
 
-> 
+>
 > </br>
-> 
+>
 > ### CAVEAT !
-> 
-> `dynamic_cast<>()` is used to check if the object (client, client behavior, etc) inherits from `ISmaccUpdatable`.</br> 
+>
+> `dynamic_cast<>()` is used to check if the object (client, client behavior, etc) inherits from `ISmaccUpdatable`.</br>
 > However, `dynamic_cast<>()` returns `nullptr` in case of **private** inheritance.
 >
 > E.g. consider following class definitions:
@@ -483,12 +479,9 @@ In other words: an `ISmaccUpdatable` has its `update()` method called periodical
 >
 > - `MyClient1` is **not** recognized as an `ISmaccUpdatable` and its `update()` is **not** called.
 > - `MyClient2` works as expected.
-> 
+>
 > </br>
-> 
-
-
-
+>
 
 </br>
 </br>
@@ -497,7 +490,6 @@ In other words: an `ISmaccUpdatable` has its `update()` method called periodical
 
 As it turns out, none of the clients, client behaviors, states, etc in the sm_atomic example are `ISmaccUpdatable`.</br>
 So that's a bit of an anticlimax isn´t it?
- 
 
 Yet, we are better prepared now to dig through the sm_atomic code:
 
@@ -534,7 +526,7 @@ The event reaction is defined similar to Boost Statechart reactions, but with a 
 ```c++
   // Boost Statechart
   transition< eventtype, targetstate >
-  
+
   // SMACC2
   Transition<                                 // Note the capital 'T'
     EvTimer<CbTimerCountdownOnce, OrTimer>,   // Event type
@@ -611,7 +603,6 @@ It's rather tough code to read, so I did not fully validate this, but I'm pretty
 
 </br>
 
-
 Now we're at it, that same file also implements `standardOnExit(state)`. Similarly, this one seems to check if the state implements `onExit()` and calls it accordingly. `standardOnExit(state)` --and hence the state's `onExit()`-- is called from the standard Boost Statechart `exit()` call of the state (implementation in [`Smacc2::SmaccState::exit()`](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc__state__base_8hpp_source.html) )
 
 </br>
@@ -630,12 +621,12 @@ It forwards the notification to `ISmaccState::notifyTransitionFromTransitionType
 
 </br>
 
-> 
+>
 > </br>
-> 
+>
 > ### Intermediate conclusions #3
-> 
-> - SMACC2 Transitions (with captial 'T') optionally take an extra 'TAG' template parameter, 
+>
+> - SMACC2 Transitions (with captial 'T') optionally take an extra 'TAG' template parameter,
 > - States can implement specific `onExit(tag_type specific_tag)` member functions,
 >   - These are called in case of a Transition that has that specific tag type,
 > - States can also have a generic `onExit()` without tag type,
@@ -645,11 +636,11 @@ It forwards the notification to `ISmaccState::notifyTransitionFromTransitionType
 >
 >
 > </br>
-> 
+>
 > [ QUESTION:&emsp;*Does this imply that it is not intended to use `sc::custom_reaction< event >` and corresponding `sc::result react( const event & )` functions?* ]
 >
 > </br>
-> 
+>
 
 
 </br>
@@ -667,7 +658,7 @@ template <typename TSource, typename TOrthogonal>
 struct EvTimer : sc::event<EvTimer<TSource, TOrthogonal>> {};
 ```
 
-[ QUESTION &emsp;*Not clear why EvTimer is a template class, afaik it could also be the following (less confusing for first time users):&emsp; 
+[ QUESTION &emsp;*Not clear why EvTimer is a template class, afaik it could also be the following (less confusing for first time users):&emsp;
 `struct EvTimer : sc::event<EvTimer> {}; `*]</br>
 [ POSSIBLE ANSWER: *I think the template definition is used to define source- and orthogonal-specific events. I.e. one type of client can be added to multiple orthogonals and send client- and orthogonal-specific events (as long as the orthogonals are of a different type).*]
 
@@ -702,7 +693,7 @@ These state machine `postEvent()` methods take an `EventLifeTime` which defaults
 ```c++
   template <typename EventType>
   void postEvent(EventType * ev, EventLifeTime evlifetime = EventLifeTime::ABSOLUTE);
- 
+
   template <typename EventType>
   void postEvent(EventLifeTime evlifetime = EventLifeTime::ABSOLUTE);
 ```
@@ -710,7 +701,7 @@ These state machine `postEvent()` methods take an `EventLifeTime` which defaults
 </br>
 
 `ISmaccStateMachine::postEvent()` instantiates a new event object, of type `EventType`, and then calls `ISmaccStateMachine::postEvent(event)`. </br>
- 
+
 &emsp;&emsp;&emsp;[ QUESTION:&emsp; ~~Ugly raw pointer. What is the lifetime of an event? Who deletes it?~~&emsp;See below:&emsp;`SignalDetector::postEvent(EventType* ev)` ] </br></br>
 
 `ISmaccStateMachine::postEvent( event, eventLifeTime)`:
@@ -728,14 +719,14 @@ These state machine `postEvent()` methods take an `EventLifeTime` which defaults
   - &emsp;[QUESTION:&emsp;Is this correct?]</br>
   - This means that weakPtrEvent is somewhat of an ill-chosen name and should rather be sharedPtrEvent or intrusivePtrEvent.</br>
 -  And then dispatches the event to the state machine **FifoScheduler queue**.
-  
+
 
 </br></br>
 
 ### The Client Behaviors
 
 
-[`sm_atomic::State1`](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc2__sm__reference__library_2sm__atomic_2include_2sm__atomic_2states_2st__state__1_8hpp_source.html) 
+[`sm_atomic::State1`](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc2__sm__reference__library_2sm__atomic_2include_2sm__atomic_2states_2st__state__1_8hpp_source.html)
 and
 [`sm_atomic::State2`](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc2__sm__reference__library_2sm__atomic_2include_2sm__atomic_2states_2st__state__2_8hpp_source.html)
 configure client behaviors into the orthogonal in their `staticConfigure()` methods:
@@ -808,7 +799,6 @@ The assumed chronologic order is as follows:
   - The callback signal connection is done through the state machine, which ensures that these are disconnected upon state change. It seems that currentlly, states, state reactors and client behaviors can register such signals, see [`createSignalConnection()`](https://robosoft-ai.github.io/smacc2_doxygen/master/html/smacc__state__machine__impl_8hpp_source.html#l00355).
 
 
-
 </br>
 </br>
 
@@ -839,6 +829,3 @@ Other relevant functions of the `ISmaccClient` base class:
 - void postEvent()
 - void postEvent(const EventType &ev)
 ```
-
-
-
